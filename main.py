@@ -1,6 +1,23 @@
-from fastapi import FastAPI
+from contextlib import asynccontextmanager
 
-app = FastAPI()
+from fastapi import FastAPI
+from sqlalchemy import text
+from src.configs.pg import engine
+
+
+async def check_postgres_connection():
+    async with engine.connect() as conn:
+        await conn.execute(text("select 1"))
+        print("Postgres Connected Successfully")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await check_postgres_connection()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 @app.get("/")
