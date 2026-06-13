@@ -11,3 +11,4 @@ class UserRole(StrEnum):
 class TokenType(StrEnum):
     ACCESS_TOKEN = "access_token"
     REFRESH_TOKEN = "refresh_token"
+    PASSWORD_RESET = "password_reset"

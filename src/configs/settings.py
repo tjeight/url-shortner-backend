@@ -23,6 +23,17 @@ class Settings(BaseSettings):
     REDIS_PORT: int = 6379
     REDIS_PASSWORD: str = ""
 
+    # Resend variable
+    RESEND_API_KEY: str = ""
+    RESEND_EMAIL_DOMAIN: str = ""
+    RESEND_FROM_EMAIL: str = ""
+
+    # App Name
+    APP_NAME: str = "URL Shortener"
+
+    # Reset Token
+    PASSWORD_RESET_OTP_EXPIRE_MINUTES: int = 5
+
     # Set the configuration for the settings, specifying the .env file to load environment variables from.
     model_config = SettingsConfigDict(
         env_file=".env",

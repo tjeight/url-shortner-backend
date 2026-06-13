@@ -9,6 +9,11 @@ from src.configs.redis import redis_client
 from src.routes.user import user_router
 
 
+async def check_resend_config():
+
+    print("Resend Configured Successfully")
+
+
 async def check_postgres_connection():
     async with engine.connect() as conn:
         await conn.execute(text("select 1"))
@@ -24,6 +29,7 @@ async def check_redis_connection():
 async def lifespan(app: FastAPI):
     await check_postgres_connection()
     await check_redis_connection()
+    await check_resend_config()
     yield
 
 

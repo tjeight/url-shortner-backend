@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.dependencies.pg import get_database
 from src.modules.auth.models import UserSession
-from src.modules.auth.schemas import UserAuth
+from src.modules.auth.schemas import UserAuth, UserResetAuth
 from src.configs.settings import settings
 from src.modules.auth.enums import TokenType
 
@@ -37,12 +37,13 @@ async def create_jwt_token(payload: dict, token_type: TokenType) -> str:
     # Copy the dic
     data = payload.copy()
 
-    # Check the token type and get the expiry time
-    expiry_time = (
-        settings.get_access_token_expiry_minutes
-        if token_type == TokenType.ACCESS_TOKEN
-        else settings.get_refresh_token_expiry_days
-    )
+    # Set the expiry time based on the token type
+    if token_type == TokenType.ACCESS_TOKEN:
+        expiry_time = settings.get_access_token_expiry_minutes
+    elif token_type == TokenType.REFRESH_TOKEN:
+        expiry_time = settings.get_refresh_token_expiry_days
+    elif token_type == TokenType.PASSWORD_RESET:
+        expiry_time = settings.get_access_token_expiry_minutes
 
     # Update the expiry time
     data["exp"] = expiry_time
@@ -221,6 +222,61 @@ async def validate_refresh_token(
     except jwt.DecodeError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Refresh Token"
+        )
+    except jwt.PyJWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+        )
+
+    except Exception as e:
+        logger.error(f"Auth validation error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal Server Error",
+        )
+
+
+async def validate_password_reset_token(password_reset_token_jwt: str) -> UserResetAuth:
+    try:
+        # Check if the password reset token is valid or not
+        if not password_reset_token_jwt:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Missing Password Reset Token",
+            )
+
+        # Decode the jwt
+        password_reset_token = jwt.decode(
+            jwt=password_reset_token_jwt,
+            algorithms=[settings.JWT_ALGORITHM],
+            key=settings.JWT_SECRET_KEY,
+        )
+
+        user_id = password_reset_token["user_id"]
+        token_type = password_reset_token["type"]
+
+        if not all([user_id, token_type]):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload"
+            )
+
+        if token_type != TokenType.PASSWORD_RESET.value:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Token Type"
+            )
+
+        return UserResetAuth(user_id=password_reset_token["user_id"])
+
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Provided Expired Password Reset Token",
+        )
+
+    except jwt.DecodeError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Password Reset Token",
         )
     except jwt.PyJWTError:
         raise HTTPException(
