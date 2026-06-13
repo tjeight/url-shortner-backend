@@ -1,10 +1,12 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from sqlalchemy import text
+
 from src.configs.pg import engine
+from src.configs.redis import redis_client
 from src.routes.user import user_router
-import logging
 
 
 async def check_postgres_connection():
@@ -13,9 +15,15 @@ async def check_postgres_connection():
         print("Postgres Connected Successfully")
 
 
+async def check_redis_connection():
+    await redis_client.ping()
+    print("Redis Connected Successfully")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await check_postgres_connection()
+    await check_redis_connection()
     yield
 
 

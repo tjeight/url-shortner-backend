@@ -13,6 +13,7 @@ from time import perf_counter
 # Set the logger
 
 from src.modules.auth.schemas import (
+    UserAuth,
     UserLoginPostRequestModel,
     UserRegisterPostRequestModel,
 )
@@ -121,15 +122,27 @@ async def user_login_post(
 
         start_time = perf_counter()
         # Build token payload
-        token_payload = {
+        access_token_payload = {
             "user_id": str(user.user_id),
             "role": user.role,
             "session_id": str(new_session.user_session_id),
+            "type": TokenType.ACCESS_TOKEN.value,
+        }
+
+        refresh_token_payload = {
+            "user_id": str(user.user_id),
+            "role": user.role,
+            "session_id": str(new_session.user_session_id),
+            "type": TokenType.REFRESH_TOKEN.value,
         }
 
         # Create tokens
-        access_token = await create_jwt_token(token_payload, TokenType.ACCESS_TOKEN)
-        refresh_token = await create_jwt_token(token_payload, TokenType.REFRESH_TOKEN)
+        access_token = await create_jwt_token(
+            access_token_payload, TokenType.ACCESS_TOKEN
+        )
+        refresh_token = await create_jwt_token(
+            refresh_token_payload, TokenType.REFRESH_TOKEN
+        )
         print(f"Token Creation Time: {perf_counter() - start_time:.4f} seconds")
 
         start_time = perf_counter()
@@ -178,6 +191,55 @@ async def user_login_post(
     except Exception as e:
         await db.rollback()
         logger.error(f"Login error: {e}", exc_info=True)
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"success": False, "message": "Internal Server Error"},
+        )
+
+
+# Function to handle the refresh access token
+async def refresh_access_token_get(auth: UserAuth):
+    try:
+        # Create the access token since the refresh token is already verified
+        # Build token payload
+        access_token_payload = {
+            "user_id": str(auth.user_id),
+            "role": auth.role,
+            "session_id": str(auth.session_id),
+            "type": TokenType.ACCESS_TOKEN.value,
+        }
+
+        # Create the access token
+        access_token = await create_jwt_token(
+            payload=access_token_payload, token_type=TokenType.ACCESS_TOKEN
+        )
+
+        # Create the expiry time for the cookie
+        access_token_expiry_time = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+
+        # Create the response and set the cookie
+        response = JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "success": True,
+                "message": "Access Token Refreshed Successfully",
+            },
+        )
+
+        response.set_cookie(
+            key=TokenType.ACCESS_TOKEN.value,
+            value=access_token,
+            httponly=True,
+            path="/",
+            samesite="lax",
+            secure=True,
+            max_age=access_token_expiry_time,
+        )
+
+        return response
+
+    except Exception as e:
+        logger.error(f"Refresh token error: {e}", exc_info=True)
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"success": False, "message": "Internal Server Error"},

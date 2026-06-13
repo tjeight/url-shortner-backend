@@ -18,6 +18,11 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
+    # Redis Variables
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_PASSWORD: str = ""
+
     # Set the configuration for the settings, specifying the .env file to load environment variables from.
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -46,6 +51,10 @@ class Settings(BaseSettings):
     @property
     def get_refresh_token_expiry_days(self) -> datetime:
         return datetime.now(UTC) + timedelta(days=self.REFRESH_TOKEN_EXPIRE_DAYS)
+
+    @property
+    def get_redis_url(self) -> str:
+        return f"redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/0"
 
 
 # Configure the settings class

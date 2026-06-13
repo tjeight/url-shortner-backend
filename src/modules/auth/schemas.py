@@ -13,3 +13,10 @@ class UserRegisterPostRequestModel(BaseModel):
 class UserLoginPostRequestModel(BaseModel):
     user_email: EmailStr = Field(..., description="User Email")
     password: str = Field(..., description="Password for the email")
+
+
+# Class to handle the User Auth
+class UserAuth(BaseModel):
+    user_id: str = Field(..., description="User ID")
+    role: str = Field(..., description="User Role")
+    session_id: str = Field(..., description="User Session ID")

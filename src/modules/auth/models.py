@@ -41,6 +41,9 @@ class UserSession(Base):
     refresh_token_hash: Mapped[str] = mapped_column(String, nullable=True)
     device_info: Mapped[str] = mapped_column(String, nullable=True)
 
+    # Add the is_active field to track if the sessiEon is active or not
+    is_active: Mapped[bool] = mapped_column(default=True, nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=func.now()
     )
