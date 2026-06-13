@@ -6,6 +6,7 @@ from sqlalchemy import text
 
 from src.configs.pg import engine
 from src.configs.redis import redis_client
+from src.routes.admin import admin_router
 from src.routes.user import user_router
 
 
@@ -48,3 +49,5 @@ def read_root():
 
 # Include the user router
 app.include_router(user_router, prefix="/api/v1")
+# Include the admin router
+app.include_router(admin_router, prefix="/api/v1")
