@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, UTC
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -9,6 +11,12 @@ class Settings(BaseSettings):
     POSTGRES_HOST: str = ""
     POSTGRES_PORT: int = 5432
     POSTGRES_DB: str = ""
+
+    # JWT configuration parameters, including the secret key and algorithm used for token generation and validation.
+    JWT_SECRET_KEY: str = ""
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     # Set the configuration for the settings, specifying the .env file to load environment variables from.
     model_config = SettingsConfigDict(
@@ -30,6 +38,14 @@ class Settings(BaseSettings):
             f"postgresql+psycopg2://{self.POSTGRES_USERNAME}:{self.POSTGRES_PASSWORD}"
             f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
+
+    @property
+    def get_access_token_expiry_minutes(self) -> datetime:
+        return datetime.now(UTC) + timedelta(minutes=self.ACCESS_TOKEN_EXPIRE_MINUTES)
+
+    @property
+    def get_refresh_token_expiry_days(self) -> datetime:
+        return datetime.now(UTC) + timedelta(days=self.REFRESH_TOKEN_EXPIRE_DAYS)
 
 
 # Configure the settings class

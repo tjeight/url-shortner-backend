@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from sqlalchemy import text
 from src.configs.pg import engine
 from src.routes.user import user_router
+import logging
 
 
 async def check_postgres_connection():
@@ -17,6 +18,11 @@ async def lifespan(app: FastAPI):
     await check_postgres_connection()
     yield
 
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+)
 
 app = FastAPI(lifespan=lifespan)
 
