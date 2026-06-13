@@ -11,7 +11,7 @@ from src.dependencies.pg import get_database
 from src.modules.auth.user.models import UserSession
 from src.modules.auth.user.schemas import UserAuth, UserResetAuth
 from src.configs.settings import settings
-from src.modules.auth.user.enums import TokenType
+from src.modules.auth.user.enums import TokenType, UserRole
 
 logger = logging.getLogger(__name__)
 
@@ -285,6 +285,181 @@ async def validate_password_reset_token(password_reset_token_jwt: str) -> UserRe
 
     except Exception as e:
         logger.error(f"Auth validation error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal Server Error",
+        )
+
+
+# Check the admin has the access token
+async def validate_admin_auth(
+    request: Request, db: AsyncSession = Depends(get_database)
+) -> UserAuth:
+    try:
+        # Get access token from cookie
+        access_token = request.cookies.get("access_token")
+
+        # Check if the access token is present
+        if not access_token:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Access token missing"
+            )
+
+        # Decode token
+        payload = jwt.decode(
+            jwt=access_token,
+            key=settings.JWT_SECRET_KEY,
+            algorithms=[settings.JWT_ALGORITHM],
+        )
+
+        # Extract payload fields
+        user_id = payload.get("user_id")
+        role = payload.get("role")
+        session_id = payload.get("session_id")
+        token_type = payload.get("type")
+
+        # Validate all fields present
+        if not all([user_id, role, session_id]):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload"
+            )
+
+        # Verify token type is access token
+        if token_type != TokenType.ACCESS_TOKEN.value:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token type"
+            )
+
+        # Verify the role is admin
+        if role != UserRole.ADMIN.value:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required"
+            )
+
+        # Validate session exists and is active in DB
+        session = await db.scalar(
+            select(UserSession).where(
+                UserSession.user_session_id == session_id, UserSession.is_active
+            )
+        )
+
+        # Check if the session is active
+        if not session:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Session expired or logged out",
+            )
+
+        return UserAuth(
+            user_id=str(user_id),
+            role=str(role),
+            session_id=str(session_id),
+        )
+
+    except HTTPException:
+        raise
+
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has expired"
+        )
+
+    except jwt.PyJWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+        )
+
+    except Exception as e:
+        logger.error(f"Admin auth validation error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal Server Error",
+        )
+
+
+# Check the admin has the refresh token
+async def validate_admin_refresh_token(
+    request: Request, db: AsyncSession = Depends(get_database)
+) -> UserAuth:
+    try:
+        # Fetch the refresh token from the request
+        refresh_token_jwt = request.cookies.get("refresh_token")
+
+        # Check if the refresh token is valid or not
+        if not refresh_token_jwt:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing Refresh Token"
+            )
+
+        # Decode the jwt
+        refresh_token = jwt.decode(
+            jwt=refresh_token_jwt,
+            algorithms=[settings.JWT_ALGORITHM],
+            key=settings.JWT_SECRET_KEY,
+        )
+
+        # Extract the token fields
+        user_id = refresh_token["user_id"]
+        role = refresh_token["role"]
+        session_id = refresh_token["session_id"]
+        token_type = refresh_token["type"]
+
+        # Validate all fields present
+        if not all([user_id, role, session_id]):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload"
+            )
+
+        # Verify token type is refresh token
+        if token_type != TokenType.REFRESH_TOKEN.value:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Token Type"
+            )
+
+        # Verify the role is admin
+        if role != UserRole.ADMIN.value:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required"
+            )
+
+        # Check the session exists and is active
+        session = await db.scalar(
+            select(UserSession).where(
+                UserSession.user_session_id == session_id,
+                UserSession.user_id == user_id,
+                UserSession.is_active,
+            )
+        )
+
+        # Check if the session is active
+        if not session:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Admin Session"
+            )
+
+        return UserAuth(session_id=session_id, role=role, user_id=user_id)
+
+    except HTTPException:
+        raise
+
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Provided Expired Refresh Token",
+        )
+
+    except jwt.DecodeError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Refresh Token"
+        )
+
+    except jwt.PyJWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+        )
+
+    except Exception as e:
+        logger.error(f"Admin refresh token validation error: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal Server Error",
