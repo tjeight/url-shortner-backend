@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Body, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.modules.auth.services import (
+from src.modules.auth.user.services import (
     forgot_password_email_verification_post,
     forgot_password_otp_verification_post,
     refresh_access_token_get,
@@ -10,7 +10,7 @@ from src.modules.auth.services import (
     user_signup_post,
 )
 from src.dependencies.pg import get_database
-from src.modules.auth.schemas import (
+from src.modules.auth.user.schemas import (
     UserAuth,
     UserForgotPasswordPostRequestModel,
     UserForgotPasswordVerifyOTPPostRequestModel,

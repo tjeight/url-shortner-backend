@@ -8,10 +8,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.dependencies.pg import get_database
-from src.modules.auth.models import UserSession
-from src.modules.auth.schemas import UserAuth, UserResetAuth
+from src.modules.auth.user.models import UserSession
+from src.modules.auth.user.schemas import UserAuth, UserResetAuth
 from src.configs.settings import settings
-from src.modules.auth.enums import TokenType
+from src.modules.auth.user.enums import TokenType
 
 logger = logging.getLogger(__name__)
 

@@ -8,12 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.configs.redis import redis_client
 from src.configs.settings import settings
-from src.modules.auth.enums import TokenType, UserRole
-from src.modules.auth.helpers import build_otp_email
-from src.modules.auth.models import Users, UserSession
+from src.modules.auth.user.enums import TokenType, UserRole
+from src.modules.auth.user.helpers import build_otp_email
+from src.modules.auth.user.models import Users, UserSession
 
 # Set the logger
-from src.modules.auth.schemas import (
+from src.modules.auth.user.schemas import (
     UserAuth,
     UserForgotPasswordPostRequestModel,
     UserForgotPasswordVerifyOTPPostRequestModel,
