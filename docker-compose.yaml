@@ -3,27 +3,48 @@ services:
     image: postgres:latest
     container_name: url-shortner-db
     restart: unless-stopped
-
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: url_shortner_storage
       POSTGRES_DB: url_shortner_db
-
     ports:
       - "2001:5432"
-
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   redis:
     image: redis:7.2-alpine
     container_name: url-shortner-redis
     restart: unless-stopped
-
     ports:
       - "2002:6379"
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes --requirepass url_shortner_cache_storage
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-a", "url_shortner_cache_storage", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: url-shortner-app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
 volumes:
   postgres_data:
