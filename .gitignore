@@ -21,3 +21,6 @@ eggs/
 
 # Environments
 .env
+
+# Ruff cache
+.ruff_cache/
