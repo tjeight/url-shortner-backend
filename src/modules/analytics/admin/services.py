@@ -1,0 +1,103 @@
+import logging
+
+from fastapi import status
+from fastapi.responses import JSONResponse
+from fastapi_pagination import Params
+from fastapi_pagination.ext.sqlalchemy import paginate
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.modules.analytics.users.models import URLClick
+from src.modules.analytics.users.payloads import get_user_click_payload
+from src.modules.urls.user.models import LinkUrl
+
+logger = logging.getLogger(__name__)
+
+
+# Admin Function to handle the get analytics
+async def admin_analytics_get(
+    db: AsyncSession,
+    page: int = 1,
+    size: int = 10,
+):
+    try:
+        # Total URLs in the system
+        total_urls_query = await db.execute(select(func.count(LinkUrl.link_url_id)))
+
+        total_urls = total_urls_query.scalar() or 0
+
+        # Total clicks in the system
+        total_clicks_query = await db.execute(select(func.count(URLClick.url_click_id)))
+
+        total_clicks = total_clicks_query.scalar() or 0
+
+        # Unique visitors across all URLs
+        unique_visitors_query = await db.execute(
+            select(func.count(func.distinct(URLClick.ip_address)))
+        )
+
+        unique_visitors = unique_visitors_query.scalar() or 0
+
+        # Last click timestamp
+        last_click_query = await db.execute(select(func.max(URLClick.clicked_at)))
+
+        last_clicked_at = last_click_query.scalar()
+
+        # Active URLs
+        active_urls_query = await db.execute(
+            select(func.count(LinkUrl.link_url_id)).where(LinkUrl.is_active.is_(True))
+        )
+
+        active_urls = active_urls_query.scalar() or 0
+
+        # Detailed click history
+        clicks_query = select(URLClick).order_by(URLClick.clicked_at.desc())
+
+        paginated_result = await paginate(
+            conn=db,
+            query=clicks_query,
+            params=Params(page=page, size=size),
+        )
+
+        clicks_data = [
+            get_user_click_payload(click=click) for click in paginated_result.items
+        ]
+
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "success": True,
+                "message": "Admin analytics retrieved successfully",
+                "pagination": {
+                    "page": page,
+                    "size": size,
+                    "total": paginated_result.total,
+                },
+                "analytics": {
+                    "total_urls": total_urls,
+                    "active_urls": active_urls,
+                    "total_clicks": total_clicks,
+                    "unique_visitors": unique_visitors,
+                    "last_clicked_at": (
+                        last_clicked_at.isoformat() if last_clicked_at else ""
+                    ),
+                    "clicks": clicks_data,
+                },
+            },
+        )
+
+    except Exception as e:
+        await db.rollback()
+
+        logger.error(
+            f"Failed to get admin analytics: {e}",
+            exc_info=True,
+        )
+
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "success": False,
+                "message": "Internal Server Error",
+            },
+        )
