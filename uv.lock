@@ -347,6 +347,20 @@ wheels = [
 ]
 
 [[package]]
+name = "fastapi-pagination"
+version = "0.15.14"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "fastapi" },
+    { name = "pydantic" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/88/23/a6ede2d55fb92be2bff1568e84027e374311c8b1262cd908da3db65f0025/fastapi_pagination-0.15.14.tar.gz", hash = "sha256:61209b30172f928887a2537a85d144a2ae970edfadf160aab7c1fb15676dd651", size = 608334, upload-time = "2026-05-30T12:16:35.469Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ad/3d/9e2ee25fd0a1a2c63995967885b2ff5d4f0cc40823817a1c745351ea745c/fastapi_pagination-0.15.14-py3-none-any.whl", hash = "sha256:b1c2ae46ae9952199f75d07726e3f11909ecd32bf12701a11f3e1080f05c4e91", size = 65778, upload-time = "2026-05-30T12:16:34.384Z" },
+]
+
+[[package]]
 name = "fastar"
 version = "0.11.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1437,6 +1451,7 @@ dependencies = [
     { name = "alembic" },
     { name = "asyncpg" },
     { name = "fastapi", extra = ["standard"] },
+    { name = "fastapi-pagination" },
     { name = "passlib" },
     { name = "pre-commit" },
     { name = "psycopg2-binary" },
@@ -1455,6 +1470,7 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.18.4" },
     { name = "asyncpg", specifier = ">=0.31.0" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.136.3" },
+    { name = "fastapi-pagination", specifier = ">=0.15.14" },
     { name = "passlib", specifier = "<4.0.0" },
     { name = "pre-commit", specifier = ">=4.6.0" },
     { name = "psycopg2-binary", specifier = ">=2.9.12" },

@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     # Reset Token
     PASSWORD_RESET_OTP_EXPIRE_MINUTES: int = 5
 
+    # BASE URL
+    BASE_URL: str = "https://tj-url-shortner"
+
     # Set the configuration for the settings, specifying the .env file to load environment variables from.
     model_config = SettingsConfigDict(
         env_file=".env",

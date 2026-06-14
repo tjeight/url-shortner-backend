@@ -80,7 +80,9 @@ def hash_refresh_token(token: str) -> str:
 
 
 # Check the user has the access token
-async def validate_user_auth(request: Request, db: AsyncSession) -> UserAuth:
+async def validate_user_auth(
+    request: Request, db: AsyncSession = Depends(get_database)
+) -> UserAuth:
     try:
         # Get access token from cookie
         access_token = request.cookies.get("access_token")
