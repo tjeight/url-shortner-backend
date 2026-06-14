@@ -121,6 +121,7 @@ async def cache_redirect_url(
 
     # Create the cache data
     cache_data = {
+        "link_url_id": str(url.link_url_id),
         "long_url": url.long_url,
         "expires_at": url.expires_at.isoformat(),
     }

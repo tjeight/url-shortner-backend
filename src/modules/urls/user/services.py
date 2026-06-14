@@ -1,12 +1,13 @@
 import logging
 from datetime import UTC, datetime, timedelta
 
-from fastapi import status
+from fastapi import Request, status
 from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.modules.analytics.users.models import URLClick
 from src.configs.settings import settings
 from src.modules.auth.user.schemas import UserAuth
 from src.modules.urls.user.helpers import (
@@ -147,9 +148,8 @@ async def url_short_get(
 
 
 # Function to handle the user url redirect get
-async def url_redirect_get(db: AsyncSession, short_code: str):
+async def url_redirect_get(db: AsyncSession, short_code: str, request: Request):
     try:
-        print("Redirect URL called with short code:", short_code)
         # Fetch the url from the cache
         user_url_result = await cache_redirect_url(db=db, short_code=short_code)
 
@@ -177,6 +177,26 @@ async def url_redirect_get(db: AsyncSession, short_code: str):
                 },
             )
 
+        # Get the ip address and other user agent info
+        ip_address = request.client.host if request.client else None
+
+        user_agent = request.headers.get("user-agent")
+
+        # Add to the db
+        new_click = URLClick(
+            link_url_id=user_url_result["link_url_id"],
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+
+        # Analytics should not block the redirect, so we handle exceptions and log them without affecting the user experience
+        try:
+            db.add(new_click)
+            await db.commit()
+        except Exception:
+            await db.rollback()
+            logger.exception("Analytics failed")
+
         # Return the response
         return RedirectResponse(
             url=user_url_result["long_url"],
@@ -184,6 +204,7 @@ async def url_redirect_get(db: AsyncSession, short_code: str):
         )
 
     except Exception as e:
+        await db.rollback()
         logger.error(f"URL shortening error: {e}", exc_info=True)
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

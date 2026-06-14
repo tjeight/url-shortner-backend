@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Body, Depends, Query
+from fastapi import APIRouter, Body, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.modules.urls.user.services import (
     url_short_get,
@@ -63,6 +63,7 @@ async def url_short_delete_call(
 # Router Function to handle the redirect url get
 @user_url_router.get("/redirect/{short_code}")
 async def url_redirect_call(
+    request: Request,
     short_code: str,
     db: AsyncSession = Depends(get_database),
 ):
@@ -70,6 +71,7 @@ async def url_redirect_call(
     return await url_redirect_get(
         db=db,
         short_code=short_code,
+        request=request,
     )
 
 
